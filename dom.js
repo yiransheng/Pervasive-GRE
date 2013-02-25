@@ -1,38 +1,27 @@
 
-var config = {
+var ignoreTags = /^(script|img|style)$/;
    
-    ignoreTags : ["script", "img", "style"]
-   
-};
 
-var parseDom = function(elem, parent, handleTextNode) {
+var grabText = function(elem, parent) {
     // preserve context  
-    return (function(elem, parent, handleTextNode){  
-        handleTextNode = elem instanceof Function ? elem : (parent instanceof Function ? parent : handleTextNode);
+    return (function(elem, parent){  
         elem = elem || document.body;
 
         if (elem.nodeType == 1 && 
-            config.ignoreTags.indexOf(elem.tagName) != -1) {
+            !ignoreTags.test(elem.tagName.toLowerCase())) {
             for (var i=0, children=elem.childNodes;i<children.length;i++) {
-                parseDom(children[i], elem, handleTextNode)    
+                grabText(children[i], elem)    
             }
-            
         } else if (elem.nodeType == 3) {
-            handleTextNode(elem.data, parent);
+            this.data.push({node:parent, text:elem.data});
         }
-        return this
-    }).apply(parseDom, [elem, parent, handleTextNode]);
+        return this.data;
+    }).apply(grabText, [elem, parent]);
 };
 
-exports.parse_dom = function(handleTextNode, opts) {
-    if (opts) {
-        for (var k in opts) {
-            config[k] = opts[k];     
-        }    
-    }
+grabText.data = [];
 
-    return parseDom(handleTextNode)
-};
+exports = grabText;
 
 
 

@@ -11,9 +11,7 @@ var pgre = Object.create({
         return this  
     },
 
-    match : function(text, domElem) {
-        text = text.toLowerCase();
-    }
+    
          
     
 }};
