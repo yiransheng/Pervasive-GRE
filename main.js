@@ -1,9 +1,11 @@
 
-var r = require("./dom.js");
-
-/*var pgre = Object.create({
+var pgre = Object.create({
     
     vocab : null,
+
+    init : function() {
+        
+    },
 
     loadVocab : function() {
         return this  
@@ -14,4 +16,4 @@ var r = require("./dom.js");
     }
          
     
-}};*/
+}};
