@@ -7,6 +7,8 @@ This is a Chrome Extension designed to aid one's vocabulary building process, in
 Though this app is designed with aiding GRE preperation as its goal, it certainly helps general English language learners as well.        
 
 Credits
+=======
+
 [Typo.js](https://github.com/cfinke/Typo.js) for handling affixes. 
 
 [hint.css](https://github.com/chinchang/hint.css) for displaying tooltips.
