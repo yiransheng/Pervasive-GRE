@@ -6,6 +6,7 @@ var pgre = window.pgre || Object.create({
 
     init : function(where) {
         this.where = where = (where || "background");
+        this.loadVocab();
 
         if (where == "background") {
             this.wordChecker = require("./lib/typo.js").typo();
@@ -26,7 +27,6 @@ var pgre = window.pgre || Object.create({
         } else {
             var self = this;
             this.texts = require("./lib/dom.js").grabText();
-            this.loadVocab();
             this.port = chrome.extension.connect({name: "pgre-connection"});
             this.port.onMessage.addListener(function(msg) {
                 var node,
@@ -94,11 +94,16 @@ var pgre = window.pgre || Object.create({
 
     lookupTextBlob: function(textBlob) {
         var text, word, matches={};
-        text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s+/);
+        text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/[^a-zA-Z\-]+/);
         for (var j=0, jlen=text.length;j<jlen;j++) {
-            word = this.wordChecker.check(text[j]);
-            if (word) {
-                matches[text[j]] = word.replace(/[^a-zA-Z]+/, "").toLowerCase();
+            if (text[j].length<2) continue;
+            if (this.vocab && this.vocab[text[j]]) {
+                matches[text[j]] = text[j];
+            } else {
+                word = this.wordChecker.check(text[j]);
+                if (word) {
+                    matches[text[j]] = word.replace(/[^a-zA-Z\-]+/, "");
+                }
             }
         }
         return matches
@@ -121,7 +126,7 @@ var pgre = window.pgre || Object.create({
                line = "";    
             }         
         }
-        return blockDef
+        return (blockDef + line)
         
     }
     
