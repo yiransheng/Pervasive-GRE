@@ -1,5 +1,6 @@
 
 var ignoreTags = /^(script|img|style)$/;
+var ignoreClasses = /^(pgre)$/;
    
 
 var grabText = function(elem, parent) {
@@ -8,12 +9,13 @@ var grabText = function(elem, parent) {
         elem = elem || document.body;
 
         if (elem.nodeType == 1 && 
-            !ignoreTags.test(elem.tagName.toLowerCase())) {
+            !ignoreTags.test(elem.tagName.toLowerCase()) && 
+            !ignoreClasses.test(elem.className.toLowerCase())) {
             for (var i=0, children=elem.childNodes;i<children.length;i++) {
                 grabText(children[i], elem)    
             }
         } else if (elem.nodeType == 3) {
-            this.data.push({node:parent, text:elem.data});
+            this.data.push({node:elem, parent:parent});
         }
         return this.data;
     }).apply(grabText, [elem, parent]);
@@ -21,7 +23,5 @@ var grabText = function(elem, parent) {
 
 grabText.data = [];
 
-exports = grabText;
-
-
+exports.grabText = grabText;
 

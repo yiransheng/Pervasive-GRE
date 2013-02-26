@@ -1,4 +1,123 @@
+;(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 
+var pgre = window.pgre || Object.create({
+    
+    vocab : null,
+
+    init : function(where) {
+        this.where = where = (where || "background");
+
+        if (where == "background") {
+            this.wordChecker = require("./typo.js").typo();
+            var self = this;
+            chrome.extension.onConnect.addListener(function(port) {
+                port.onMessage.addListener(
+                    function(msg) {
+                        var matches, res = [];
+                        for (var i=0, ilen=msg.length;i<ilen;i++) {
+                            matches = self.lookupTextBlob(msg[i].contents);
+                            if (Object.keys(matches).length) {
+                                res.push({matches: matches, index: msg[i].index});
+                            }
+                        }
+                        port.postMessage(res);
+                });
+            });
+        } else {
+            var self = this;
+            this.texts = require("./dom.js").grabText();
+            this.loadVocab();
+            this.port = chrome.extension.connect({name: "pgre-connection"});
+            this.port.onMessage.addListener(function(msg) {
+                var node,
+                    parent,
+                    newNode,
+                    word,
+                    nWord,
+                    matches,
+                    i;
+                for (var j=0, jlen=msg.length;j<jlen;j++) {
+                    matches = msg[j].matches, 
+                    i = msg[j].index;
+                    for (word in matches) {
+                        node = self.texts[i].node;
+                        parent = self.texts[i].parent;
+                        nWord = matches[word];
+                        newNode = document.createElement("pgre");
+                        newNode.innerHTML = node.data.replace(word, 
+                            '<span class="pgre-highlight" data="'+nWord+'">'+word+'</span>');
+                        try {
+                            parent.replaceChild(newNode, node);
+                        } catch (e) {
+                            // console.log(parent);
+                            // console.log(node);
+                        }
+                    }
+                }
+            });
+        }
+        this.loaded = true;
+        return this;
+    },
+
+    loadVocab : function() {
+
+		var req = new XMLHttpRequest();
+		req.open("GET", chrome.extension.getURL('/dictionaries/gre.json'), false);
+		req.send(null);
+
+		return req.responseText;
+        this.vocab = JSON.parse(req.responseText);
+        return this
+    },
+
+    highlightWords : function() {
+        if (this.where == "background") return this;
+        var entry, text, msg = [];
+        for (var i=0, len=this.texts.length;i<len;i++) {
+            text = this.texts[i].node.data;
+            if (/[a-zA-Z]+/.test(text)) {
+                entry = { 
+                    contents: text,  
+                    index : i
+                };
+                msg.push(entry);
+            }
+        }
+        this.port.postMessage(msg);
+
+        return this
+    }, 
+
+    lookupTextBlob: function(textBlob) {
+        var text, word, matches={};
+        text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s+/);
+        for (var j=0, jlen=text.length;j<jlen;j++) {
+            if (word = this.wordChecker.check(text[j])) {
+                matches[text[j]] = word.replace(/[^a-zA-Z]/, "").toLowerCase();
+            }
+        }
+        return matches
+    }
+    
+});
+
+
+// Determine whether the script is run as content or background script
+try {
+    chrome.browserAction.onClicked.addListener(function(tab) {
+        if (pgre.loaded) {
+            chrome.tabs.executeScript(null,
+                                     {file: "pgre-bundle.js"});
+        }
+    });
+    pgre.init().highlightWords();
+} catch (e) {
+    pgre.init("content").highlightWords();
+}
+
+
+},{"./typo.js":2,"./dom.js":3}],2:[function(require,module,exports){(function(__dirname){
 /**
  * Typo is a JavaScript implementation of a spellchecker using hunspell-style
  * dictionaries.
@@ -736,3 +855,36 @@ Typo.prototype = {
 
 exports.Typo = Typo;
 exports.typo = function(dictionary) { dictionary = dictionary || "en-GRE"; return new Typo(dictionary)};
+
+})("/")
+},{"fs":4}],4:[function(require,module,exports){// nothing to see here... no file methods for the browser
+
+},{}],3:[function(require,module,exports){
+var ignoreTags = /^(script|img|style)$/;
+var ignoreClasses = /^(pgre)$/;
+   
+
+var grabText = function(elem, parent) {
+    // preserve context  
+    return (function(elem, parent){  
+        elem = elem || document.body;
+
+        if (elem.nodeType == 1 && 
+            !ignoreTags.test(elem.tagName.toLowerCase()) && 
+            !ignoreClasses.test(elem.className.toLowerCase())) {
+            for (var i=0, children=elem.childNodes;i<children.length;i++) {
+                grabText(children[i], elem)    
+            }
+        } else if (elem.nodeType == 3) {
+            this.data.push({node:elem, parent:parent});
+        }
+        return this.data;
+    }).apply(grabText, [elem, parent]);
+};
+
+grabText.data = [];
+
+exports.grabText = grabText;
+
+
+},{}]},{},[1]);
