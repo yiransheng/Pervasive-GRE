@@ -1,7 +1,7 @@
 {
-  "name": "Event Horizon",
+  "name": "Pervasive GRE",
   "version": "1.0",
-  "description": "Annotate anything.",
+  "description": "Highlight GRE vocabulary on any webpage.",
   "icons": {"16" : "icon16.png"
            },
   "background_page": "background.html",

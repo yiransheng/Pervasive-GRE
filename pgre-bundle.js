@@ -895,7 +895,7 @@ exports.typo = function(dictionary, a,b,c) { dictionary = dictionary || "en-GRE"
 },{"fs":4}],4:[function(require,module,exports){// nothing to see here... no file methods for the browser
 
 },{}],3:[function(require,module,exports){
-var ignoreTags = /^(script|img|style|pgre|textarea)$/;
+var ignoreTags = /^(script|img|style|pgre|textarea|input)$/;
 var ignoreClasses = /^(pgre)$/;
    
 
