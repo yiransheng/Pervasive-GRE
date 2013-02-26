@@ -35,7 +35,7 @@ var pgre = window.pgre || Object.create({
                     word,
                     nWord,
                     matches,
-                    i;
+                    span;
                 for (var j=0, jlen=msg.length;j<jlen;j++) {
                     matches = msg[j].matches, 
                     i = msg[j].index;
@@ -44,8 +44,11 @@ var pgre = window.pgre || Object.create({
                         parent = self.texts[i].parent;
                         nWord = matches[word];
                         newNode = document.createElement("pgre");
-                        newNode.innerHTML = node.data.replace(word, 
-                            '<span class="pgre-highlight" data="'+nWord+'">'+word+'</span>');
+                        span = 
+                            '<span class="pgre-highlight hint hint--top" data-hint="' 
+                            + self.wordDef(word, nWord)
+                            +'">'+word+'</span>';
+                        newNode.innerHTML = node.data.replace(word,span); 
                         try {
                             parent.replaceChild(newNode, node);
                         } catch (e) {
@@ -66,7 +69,7 @@ var pgre = window.pgre || Object.create({
 		req.open("GET", chrome.extension.getURL('/dictionaries/gre.json'), false);
 		req.send(null);
 
-		return req.responseText;
+		req.responseText;
         this.vocab = JSON.parse(req.responseText);
         return this
     },
@@ -93,11 +96,33 @@ var pgre = window.pgre || Object.create({
         var text, word, matches={};
         text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s+/);
         for (var j=0, jlen=text.length;j<jlen;j++) {
-            if (word = this.wordChecker.check(text[j])) {
-                matches[text[j]] = word.replace(/[^a-zA-Z]/, "").toLowerCase();
+            word = this.wordChecker.check(text[j]);
+            if (word) {
+                matches[text[j]] = word.replace(/[^a-zA-Z]+/, "").toLowerCase();
             }
         }
         return matches
+    },
+
+    wordDef : function(word, backupWord) {
+        var line, 
+            blockDef; 
+            def = (this.vocab && this.vocab[word]) ? this.vocab[word] : (
+                (this.vocab[backupWord] && (word = backupWord)) ? this.vocab[backupWord] : "unknown word"); 
+
+        def = word + " : " + def;
+        if (def.length<=40) return def;
+        def = def.split(/\s+/);
+        line = blockDef = "";
+        while (word = def.shift()) {
+            line += (word+" ");
+            if (line.length>40) {
+               blockDef += (line+"\n");
+               line = "";    
+            }         
+        }
+        return blockDef
+        
     }
     
 });
@@ -114,7 +139,7 @@ try {
     pgre.init().highlightWords();
 } catch (e) {
     pgre.init("content").highlightWords();
-    var $ = require('jquery-browserify');
+    // var $ = require('jquery-browserify');
 }
 
 

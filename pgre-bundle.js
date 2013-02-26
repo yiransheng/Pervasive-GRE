@@ -8,7 +8,7 @@ var pgre = window.pgre || Object.create({
         this.where = where = (where || "background");
 
         if (where == "background") {
-            this.wordChecker = require("./typo.js").typo();
+            this.wordChecker = require("./lib/typo.js").typo();
             var self = this;
             chrome.extension.onConnect.addListener(function(port) {
                 port.onMessage.addListener(
@@ -25,7 +25,7 @@ var pgre = window.pgre || Object.create({
             });
         } else {
             var self = this;
-            this.texts = require("./dom.js").grabText();
+            this.texts = require("./lib/dom.js").grabText();
             this.loadVocab();
             this.port = chrome.extension.connect({name: "pgre-connection"});
             this.port.onMessage.addListener(function(msg) {
@@ -35,7 +35,7 @@ var pgre = window.pgre || Object.create({
                     word,
                     nWord,
                     matches,
-                    i;
+                    span;
                 for (var j=0, jlen=msg.length;j<jlen;j++) {
                     matches = msg[j].matches, 
                     i = msg[j].index;
@@ -44,8 +44,11 @@ var pgre = window.pgre || Object.create({
                         parent = self.texts[i].parent;
                         nWord = matches[word];
                         newNode = document.createElement("pgre");
-                        newNode.innerHTML = node.data.replace(word, 
-                            '<span class="pgre-highlight" data="'+nWord+'">'+word+'</span>');
+                        span = 
+                            '<span class="pgre-highlight hint hint--top" data-hint="' 
+                            + self.wordDef(word, nWord)
+                            +'">'+word+'</span>';
+                        newNode.innerHTML = node.data.replace(word,span); 
                         try {
                             parent.replaceChild(newNode, node);
                         } catch (e) {
@@ -66,7 +69,7 @@ var pgre = window.pgre || Object.create({
 		req.open("GET", chrome.extension.getURL('/dictionaries/gre.json'), false);
 		req.send(null);
 
-		return req.responseText;
+		req.responseText;
         this.vocab = JSON.parse(req.responseText);
         return this
     },
@@ -93,11 +96,33 @@ var pgre = window.pgre || Object.create({
         var text, word, matches={};
         text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s+/);
         for (var j=0, jlen=text.length;j<jlen;j++) {
-            if (word = this.wordChecker.check(text[j])) {
-                matches[text[j]] = word.replace(/[^a-zA-Z]/, "").toLowerCase();
+            word = this.wordChecker.check(text[j]);
+            if (word) {
+                matches[text[j]] = word.replace(/[^a-zA-Z]+/, "").toLowerCase();
             }
         }
         return matches
+    },
+
+    wordDef : function(word, backupWord) {
+        var line, 
+            blockDef; 
+            def = (this.vocab && this.vocab[word]) ? this.vocab[word] : (
+                (this.vocab[backupWord] && (word = backupWord)) ? this.vocab[backupWord] : "unknown word"); 
+
+        def = word + " : " + def;
+        if (def.length<=40) return def;
+        def = def.split(/\s+/);
+        line = blockDef = "";
+        while (word = def.shift()) {
+            line += (word+" ");
+            if (line.length>40) {
+               blockDef += (line+"\n");
+               line = "";    
+            }         
+        }
+        return blockDef
+        
     }
     
 });
@@ -114,10 +139,13 @@ try {
     pgre.init().highlightWords();
 } catch (e) {
     pgre.init("content").highlightWords();
+    // var $ = require('jquery-browserify');
 }
 
 
-},{"./typo.js":2,"./dom.js":3}],2:[function(require,module,exports){(function(__dirname){
+
+
+},{"./lib/typo.js":2,"./lib/dom.js":3}],2:[function(require,module,exports){(function(__dirname){
 /**
  * Typo is a JavaScript implementation of a spellchecker using hunspell-style
  * dictionaries.
@@ -632,13 +660,15 @@ Typo.prototype = {
 
 		if (typeof ruleCodes === 'undefined') {
 			// Check if this might be a compound word.
-			if ("COMPOUNDMIN" in this.flags && word.length >= this.flags.COMPOUNDMIN) {
+			/* if ("COMPOUNDMIN" in this.flags && word.length >= this.flags.COMPOUNDMIN) {
 				for (var i = 0, _len = this.compoundRules.length; i < _len; i++) {
 					if (word.match(this.compoundRules[i])) {
+                        console.log("compound: "+word);
+                        console.log(this.compoundRules);
 						return word;
 					}
 				}
-			}
+			}*/
 
 			return false;
 		}
@@ -854,9 +884,9 @@ Typo.prototype = {
 };
 
 exports.Typo = Typo;
-exports.typo = function(dictionary) { dictionary = dictionary || "en-GRE"; return new Typo(dictionary)};
+exports.typo = function(dictionary, a,b,c) { dictionary = dictionary || "en-GRE"; return new Typo(dictionary,a,b,c)};
 
-})("/")
+})("/lib")
 },{"fs":4}],4:[function(require,module,exports){// nothing to see here... no file methods for the browser
 
 },{}],3:[function(require,module,exports){

@@ -11,7 +11,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*"],
-      "css": ["base.css"]
+      "css": ["/assets/base.css", "/assets/hint.min.css"]
     }
   ],
   "permissions": [
