@@ -8,7 +8,7 @@ var pgre = window.pgre || Object.create({
         this.where = where = (where || "background");
 
         if (where == "background") {
-            this.wordChecker = require("./typo.js").typo();
+            this.wordChecker = require("./lib/typo.js").typo();
             var self = this;
             chrome.extension.onConnect.addListener(function(port) {
                 port.onMessage.addListener(
@@ -25,7 +25,7 @@ var pgre = window.pgre || Object.create({
             });
         } else {
             var self = this;
-            this.texts = require("./dom.js").grabText();
+            this.texts = require("./lib/dom.js").grabText();
             this.loadVocab();
             this.port = chrome.extension.connect({name: "pgre-connection"});
             this.port.onMessage.addListener(function(msg) {
