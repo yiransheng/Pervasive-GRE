@@ -1,6 +1,6 @@
 
 
-var pgre = window.pgre || Object.create({
+var pgre = Object.create({
     
     vocab : null,
 
@@ -25,38 +25,17 @@ var pgre = window.pgre || Object.create({
                 });
             });
         } else {
+            // Flag the DOM to prevent further content scripts execution
+            var domFlag = document.createElement("pgre");
+            domFlag.id = "pgre";
+            document.body.appendChild(domFlag);
             var self = this;
-            this.texts = require("./lib/dom.js").grabText();
+            this.words = {};
+            this.texts = pgreDOM.grabText();
             this.port = chrome.extension.connect({name: "pgre-connection"});
             this.port.onMessage.addListener(function(msg) {
-                var node,
-                    parent,
-                    newNode,
-                    word,
-                    nWord,
-                    matches,
-                    span;
-                for (var j=0, jlen=msg.length;j<jlen;j++) {
-                    matches = msg[j].matches, 
-                    i = msg[j].index;
-                    for (word in matches) {
-                        node = self.texts[i].node;
-                        parent = self.texts[i].parent;
-                        nWord = matches[word];
-                        newNode = document.createElement("pgre");
-                        span = 
-                            '<span class="pgre-highlight hint hint--top" data-hint="' 
-                            + self.wordDef(word, nWord)
-                            +'">'+word+'</span>';
-                        newNode.innerHTML = node.data.replace(word,span); 
-                        try {
-                            parent.replaceChild(newNode, node);
-                        } catch (e) {
-                            // console.log(parent);
-                            // console.log(node);
-                        }
-                    }
-                }
+                pgreDOM.highlightWords(msg, self);
+                pgreDOM.wordModelView();
             });
         }
         this.loaded = true;
@@ -128,6 +107,28 @@ var pgre = window.pgre || Object.create({
         }
         return (blockDef + line)
         
+    }, 
+
+    findSentences : function(p,w) {
+        
+        w = new RegExp(w);
+        if (!w.test(p)) return;
+
+        p = p.replace(/\s+/g, " ").replace(/(^\s+|\s+$)/g, "");
+
+        var sentence,
+            sentences = [], 
+            all_sentences = p.match(/\(?[A-Z][^\.]+[\.!\?]\)?/g);
+
+        if (!all_sentences) return;
+        
+        while (sentence = all_sentences.shift()) {
+            if (w.test(p)) {
+                sentences.push(sentence);
+            }
+        } 
+
+        return sentences.length ? sentences : undefined;
     }
     
 });
@@ -143,8 +144,10 @@ try {
     });
     pgre.init().highlightWords();
 } catch (e) {
-    pgre.init("content").highlightWords();
-    // var $ = require('jquery-browserify');
+    if (!document.getElementById("pgre")) {
+        var pgreDOM = require("./lib/dom.js");
+        pgre.init("content").highlightWords();
+    }
 }
 
 

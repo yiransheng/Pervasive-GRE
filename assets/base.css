@@ -1,6 +1,49 @@
 .pgre-highlight {
-    background-color: #f90;   
- }
+background-color: #f90;   
+color : #333;
+}
 .pgre-highlight:hover{
-    background-color: #fb4;    
+background-color: #fb4;    
+color : #222;
+}
+
+#pgre{
+    display : block;
+    position: absolute;
+    z-index: 65535;
+}
+
+#pgre-right-click{
+    display: block;
+    width : 150px;
+    border : 1px solid #222;
+    background: rgba(0,0,0,.7);
+    border-left : 1px solid #d71;
+    color: #f1f2f9;
+    font-size : 13px;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+}
+#pgre-right-click a{
+    color: #f1f2f9;
+}
+#pgre-right-click ul{
+    margin: 0px 0px;
+    padding: 1px 0px;
+    border-left : 3px solid #f92;
+}
+#pgre-right-click ul li:first-child{
+    border-top: none;
+}
+#pgre-right-click ul li{
+    display : block;
+    list-style-type : none;
+    padding: 5px 10px;
+    border-bottom: 1px solid #555;
+    border-top: 1px solid #d82;
+    background: rgba(30, 28, 22, .5);
+    margin:0;
+}
+#pgre-right-click ul li:hover{
+    background-color: rgba(230,128, 22, .8);
+    border-bottom: 1px solid #d82;
 }
