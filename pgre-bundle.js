@@ -1,4 +1,51 @@
 ;(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
+// utility functions
+function forEach(obj, iterator, context) {
+    var key;
+    context = context || this;
+    if (obj) {
+        if (obj instanceof Function){
+            for (key in obj) {
+                if (key != 'prototype' && key != 'length' && key != 'name' && obj.hasOwnProperty(key)) {
+                iterator.call(context, obj[key], key);
+                }
+            }
+        } else if (obj instanceof Array) {
+            for (key = 0; key < obj.length; key++)
+                iterator.call(context, obj[key], key);
+        } else {
+            for (key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    iterator.call(context, obj[key], key);
+                }
+            }
+        }
+    } 
+    return obj;
+}
+
+function map(arraylike, fn, context) {
+    context = context || this;
+    var i, ret = [];
+    for (i=0;i<arraylike.length;i++) {
+        ret.push(fn.call(context, arraylike[i]))   
+    }
+    return ret
+}
+
+function toArray(obj, name) {
+    name = name || "name";
+    var key, prop, ret = [], el;
+    for (key in obj) {
+        el = {};
+        el[name] = key;
+        for (prop in obj[key]) {
+            el[prop] = obj[key][prop];
+        }
+        ret.push(el);
+    }
+    return ret
+}
 
 var pgre = Object.create({
     
@@ -9,7 +56,7 @@ var pgre = Object.create({
         this.loadVocab();
 
         if (where == "background") {
-            this.wordChecker = require("./lib/typo.js").typo();
+            this.wordChecker = Typo.typo();
             var self = this;
             chrome.extension.onConnect.addListener(function(port) {
                 port.onMessage.addListener(
@@ -25,23 +72,26 @@ var pgre = Object.create({
                 });
             });
         } else {
-            // Flag the DOM to prevent further content scripts execution
+            // Flag the DOM to prevent further content scripts execution, also place
+            // holder for contextmenu
             var domFlag = document.createElement("pgre");
             domFlag.id = "pgre";
             document.body.appendChild(domFlag);
             var self = this;
-            this.words = {};
             this.texts = pgreDOM.grabText();
             this.port = chrome.extension.connect({name: "pgre-connection"});
             this.port.onMessage.addListener(function(msg) {
                 pgreDOM.highlightWords(msg, self);
                 pgreDOM.wordModelView();
+                self.storeWords.call(self, msg);
+                pgreDOM.pgreView(self.words, '<div id=\"pgre-container\"></div>');
             });
         }
         this.loaded = true;
         return this;
     },
 
+    // common
     loadVocab : function() {
 
 		var req = new XMLHttpRequest();
@@ -53,6 +103,35 @@ var pgre = Object.create({
         return this
     },
 
+    // content
+
+    storeWords : function(raw) {
+        if (this.where == "background") return this;
+        var words = {};
+        forEach(raw, function(entry, j){
+            var matches = entry.matches; 
+            var i = entry.index;
+            var word, stem, sentences;
+            for (word in matches) {
+                stem = matches[word];
+                sentences = this.findSentences(
+                    pgreDOM.extractBackground(this.texts[i].parent), 
+                    word) || []; 
+                if (words[stem] && !words.__proto__[stem]) {
+                    words[stem].sentences = words[stem].sentences.concat(sentences);
+                } else {
+                    words[stem] = {
+                        def : this.vocab[stem],
+                        sentences : sentences
+                    }
+                }
+            }
+        }, this); 
+        this.words = toArray(words, "word");
+        return this
+    },
+
+    // content
     highlightWords : function() {
         if (this.where == "background") return this;
         var entry, text, msg = [];
@@ -71,6 +150,7 @@ var pgre = Object.create({
         return this
     }, 
 
+    // background
     lookupTextBlob: function(textBlob) {
         var text, word, matches={};
         text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/[^a-zA-Z\-]+/);
@@ -80,7 +160,7 @@ var pgre = Object.create({
                 matches[text[j]] = text[j];
             } else {
                 word = this.wordChecker.check(text[j]);
-                if (word) {
+                if (word && this.vocab && this.vocab[text[j]]) {
                     matches[text[j]] = word.replace(/[^a-zA-Z\-]+/, "");
                 }
             }
@@ -88,6 +168,7 @@ var pgre = Object.create({
         return matches
     },
 
+    // content
     wordDef : function(word, backupWord) {
         var line, 
             blockDef; 
@@ -109,26 +190,28 @@ var pgre = Object.create({
         
     }, 
 
+    // content
     findSentences : function(p,w) {
-        
-        w = new RegExp(w);
-        if (!w.test(p)) return;
+
+        w = new RegExp(w, "i"); 
+
+        if (!w.test(p)) return [];
 
         p = p.replace(/\s+/g, " ").replace(/(^\s+|\s+$)/g, "");
 
         var sentence,
             sentences = [], 
-            all_sentences = p.match(/\(?[A-Z][^\.]+[\.!\?]\)?/g);
+            all_sentences = p.match(/\(?[A-Z]([^\.|]|\S\.\S)+[\.!\?]\)?/g);
 
-        if (!all_sentences) return;
+        if (!all_sentences) return sentences;
         
         while (sentence = all_sentences.shift()) {
-            if (w.test(p)) {
+            if (w.test(sentence)) {
                 sentences.push(sentence);
             }
         } 
 
-        return sentences.length ? sentences : undefined;
+        return sentences;
     }
     
 });
@@ -142,6 +225,7 @@ try {
                                      {file: "pgre-bundle.js"});
         }
     });
+    var Typo = require("./lib/typo.js");
     pgre.init().highlightWords();
 } catch (e) {
     if (!document.getElementById("pgre")) {
@@ -904,7 +988,9 @@ var Handlebars = require("handlebars");
 
 // regExps
 var ignoreTags = /^(script|img|style|pgre|textarea|input)$/i;
-var ignoreClasses = /^(pgre)$/i;
+var ignoreClasses = /^(pgre)/i;
+var inlineTags = /^(a|b|i|span|strong|pgre)$/i;
+var unlikelyMeaningful = /foot|header|menu|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|button|btn|ui-/i;
    
 // functions
 var grabText = function(elem, parent) {
@@ -945,7 +1031,7 @@ var highlightWords = function(gre_words, pgre) {
             nWord = matches[word];
             newNode = document.createElement("pgre");
             span = 
-                '<a name="#pgre'+n+'"></a><span class="pgre-highlight hint hint--top" data-hint="' 
+                '<a href="#" name="#pgre'+n+'"></a><span class="pgre-highlight hint hint--top" data-hint="' 
                 + pgre.wordDef(word, nWord)
                 +'">'+word+'</span>';
             newNode.innerHTML = node.data.replace(word,span); 
@@ -975,6 +1061,41 @@ var _bindMethods = function(obj, methods) {
     }
     return obj
 };
+
+var extractBackground = function(elem, word) {
+
+    var text = elem.innerText;
+    // just one word contained in the element, and the element is inline
+    while (!(/(\S\s+\S)/.test(text)) && inlineTags.test(elem.tagName)) {
+        elem = elem.parentNode;    
+        text = elem.innerText;
+    }
+
+    var indicator = elem.id + elem.className;
+    if (indicator.search(unlikelyMeaningful) !== -1) return "";
+    return text
+};
+
+var pgreView = function(words, elem) {
+    if (!words || !elem || !words.length) return;
+
+    var template = Handlebars.templates["pgre-main"];        
+    var el = $(elem);
+    el.html(template({ words : words})).appendTo("body")
+        .find(".pgre-dropdown").click(function(e){
+            if ($(this).hasClass("pgre-dropdown-down")) {
+                $(this).next().slideUp();
+            } else {
+                $(this).next().slideDown();
+            }
+            $(this).toggleClass("pgre-dropdown-down");   
+        });
+    $('<div id="pgre-curtain"></div>').appendTo("body").click(function(){
+        $(this).hide();
+        el.hide();
+    });;
+};
+
 
 // Objects
 var wordModelView = {
@@ -1065,11 +1186,47 @@ helpers = helpers || Handlebars.helpers; data = data || {};
 
   buffer += "<div id=\"pgre-right-click\">\n    <ul>\n      <li><a href='"
     + escapeExpression(((stack1 = ((stack1 = depth0.urls),stack1 == null || stack1 === false ? stack1 : stack1.google)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "' target='_blank'>Google</a></li>\n      <li><a href='"
+    + "'>Google</a></li>\n      <li><a href='"
     + escapeExpression(((stack1 = ((stack1 = depth0.urls),stack1 == null || stack1 === false ? stack1 : stack1.wikipedia)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "' target='_blank'>Wikipedia</a></li>\n      <li><a href='"
+    + "'>Wikipedia</a></li>\n      <li><a href='"
     + escapeExpression(((stack1 = ((stack1 = depth0.urls),stack1 == null || stack1 === false ? stack1 : stack1.thesaurus)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "' target='_blank'>Thesaurus</a></li>\n    </ul>\n</div>\n";
+    + "'>Thesaurus</a></li>\n    </ul>\n</div>\n";
+  return buffer;
+  });
+templates['pgre-main'] = template(function (Handlebars,depth0,helpers,partials,data) {
+  this.compilerInfo = [2,'>= 1.0.0-rc.3'];
+helpers = helpers || Handlebars.helpers; data = data || {};
+  var buffer = "", stack1, functionType="function", escapeExpression=this.escapeExpression, self=this;
+
+function program1(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "\n<div class=\"pgre-word-wrapper\">\n  <p class=\"pgre-word\">";
+  if (stack1 = helpers.word) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
+  else { stack1 = depth0.word; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  buffer += escapeExpression(stack1)
+    + "</p>\n  <p class=\"pgre-def\">";
+  if (stack1 = helpers.def) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
+  else { stack1 = depth0.def; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  buffer += escapeExpression(stack1)
+    + "></p>\n  <div class=\"pgre-dropdown\">Example sentences on this page</div>\n  <div class=\"pgre-sentences\">\n  ";
+  stack1 = helpers.each.call(depth0, depth0.sentences, {hash:{},inverse:self.noop,fn:self.program(2, program2, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "\n  </div>\n</div>\n";
+  return buffer;
+  }
+function program2(depth0,data) {
+  
+  var buffer = "";
+  buffer += "\n    <p>"
+    + escapeExpression((typeof depth0 === functionType ? depth0.apply(depth0) : depth0))
+    + "</p>\n  ";
+  return buffer;
+  }
+
+  stack1 = helpers.each.call(depth0, depth0.words, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "\n\n";
   return buffer;
   });
 })();
@@ -1077,6 +1234,8 @@ helpers = helpers || Handlebars.helpers; data = data || {};
 
 exports.grabText = grabText;
 exports.highlightWords = highlightWords;
+exports.pgreView = pgreView;
+exports.extractBackground = extractBackground;
 exports.wordModelView = function(dom_pgre) {
     return Object.create(wordModelView).init(dom_pgre);
 };

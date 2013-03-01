@@ -1,0 +1,13 @@
+{{#each words}}
+<div class="pgre-word-wrapper">
+  <p class="pgre-word">{{ word }}</p>
+  <p class="pgre-def">{{ def }}></p>
+  <div class="pgre-dropdown">Example sentences on this page</div>
+  <div class="pgre-sentences">
+  {{#each sentences}}
+    <p>{{ this }}</p>
+  {{/each}}
+  </div>
+</div>
+{{/each}}
+

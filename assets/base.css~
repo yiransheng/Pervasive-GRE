@@ -10,7 +10,7 @@ color : #222;
 #pgre{
     display : block;
     position: absolute;
-    z-index: 65534;
+    z-index: 65535;
 }
 
 #pgre-right-click{
@@ -49,18 +49,6 @@ color : #222;
     border-bottom: 1px solid #d82;
 }
 
-#pgre-curtain{
-    position:fixed;
-    width:100%;
-    height:100%;
-    padding : 0;
-    margin : 0;
-    background : rgba(0,0,0,.5);
-    top:0;
-    left:0;
-    z-index:65534;
-}
-
 #pgre-container, #pgre-container div{
   font-family: 'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   padding :0;
@@ -78,22 +66,18 @@ color : #222;
 #pgre-container {
   background: #fff;
   width: 700px;
-  height : auto;
-  padding : 64px 20px;
-  position : absolute;
-  z-index : 65535;
-  margin-left: -360px;
-  top : 64px;
-  left : 50%;
+  height : 400px;
+  padding : 20px;
+  padding-top : 64px;
   text-align: left;
   /* border-radius */
   -webkit-border-radius: 10px;
   -moz-border-radius: 10px;
   border-radius: 10px;
   /* box-shadow */
-  -webkit-box-shadow: rgba(145,188,255,0.2) 0px 1px 13px;
-  -moz-box-shadow: rgba(0,0,0,0.2) 0px 1px 13px;
-  box-shadow: rgba(0,0,0,0.2) 0px 1px 13px;
+  -webkit-box-shadow: rgba(0,0,0,0.2) 0px 1px 3px;
+  -moz-box-shadow: rgba(0,0,0,0.2) 0px 1px 3px;
+  box-shadow: rgba(0,0,0,0.2) 0px 1px 3px;
   color : #222;
 }
 
