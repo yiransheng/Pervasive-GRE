@@ -201,13 +201,13 @@ var pgre = Object.create({
 
         var sentence,
             sentences = [], 
-            all_sentences = p.match(/\(?[A-Z]([^\.|]|\S\.\S)+[\.!\?]\)?/g);
+            all_sentences = p.match(/\(?[^\.!\?]([^\.|]|\S\.\S)+[\.!\?]\)?/g);
 
         if (!all_sentences) return sentences;
         
         while (sentence = all_sentences.shift()) {
             if (w.test(sentence)) {
-                sentences.push(sentence);
+                sentences.push(sentence.replace(/(^\s+|\s+$)/g));
             }
         } 
 
