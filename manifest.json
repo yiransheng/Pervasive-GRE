@@ -1,10 +1,12 @@
 {
   "name": "Pervasive GRE",
   "version": "1.0",
+  "manifest_version" : 2,
   "description": "Highlight GRE vocabulary on any webpage.",
   "icons": {"16" : "icon16.png"
            },
   "background_page": "background.html",
+  "background" : { "page" : "background.html" }, 
   "browser_action": {
     "default_icon": "icon16.png"
   },
@@ -16,6 +18,9 @@
   ],
   "permissions": [
     "tabs", "http://*/*"
+  ], 
+  "web_accessible_resources" : [
+    "/dictionaries/*"
   ]
 }
 
