@@ -114,11 +114,15 @@ color : #222;
   border : none;
 }
 .pgre-word{
-  font-size : 24px;
+  font-size : 24px; 
   font-weight : bold;
   font-family: arial, sans-serif;
   margin-bottom: 16px !important;
   margin-top: 8px !important;
+  color: #223; !important
+}
+.pgre-word-content{
+ display:none;
 }
 
 .pgre-def{
@@ -137,7 +141,7 @@ color : #222;
 .pgre-dropdown{
   font-size: 14px;
   color : #8A92E3;
-  display: block;
+  display: block !important;
   cursor : pointer;
 }
 .pgre-dropdown:hover{

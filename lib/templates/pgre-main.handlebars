@@ -1,13 +1,15 @@
 <div class='pgre-title'>Pervasive GRE detected the following words on this page:</div>
 {{#each words}}
 <div class="pgre-word-wrapper">
-  <p class="pgre-word">{{ word }}</p>
-  <p class="pgre-def">{{ def }}></p>
-  <div class="pgre-dropdown">Example sentences on this page ({{ sentences.length }})</div>
-  <div class="pgre-sentences">
-  {{#each sentences}}
-    <p>{{ this }}</p>
-  {{/each}}
+  <div class="pgre-dropdown"><p class="pgre-word">{{ word }}</p></div>
+  <div class="pgre-word-content">
+      <p class="pgre-def">{{ def }}></p>
+      <div class="pgre-dropdown">Example sentences on this page ({{ sentences.length }})</div>
+      <div class="pgre-sentences">
+      {{#each sentences}}
+        <p>{{ this }}</p>
+      {{/each}}
+      </div>
   </div>
 </div>
 {{/each}}
