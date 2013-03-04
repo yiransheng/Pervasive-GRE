@@ -85,6 +85,7 @@ var pgre = Object.create({
                 pgreDOM.wordModelView();
                 self.storeWords.call(self, msg);
                 pgreDOM.pgreView(self.words, '<div id=\"pgre-container\"></div>');
+                pgreDOM.pgreControlView(self);
             });
         }
         this.loaded = true;
@@ -128,6 +129,9 @@ var pgre = Object.create({
             }
         }, this); 
         this.words = toArray(words, "word");
+        this.words.sort(function(a,b){
+            return (a.word > b.word)
+        });
         return this
     },
 
@@ -155,7 +159,6 @@ var pgre = Object.create({
         var text, word, matches={};
         text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/[^a-zA-Z\-]+/);
         for (var j=0, jlen=text.length;j<jlen;j++) {
-            if (text[j].length<2) continue;
             if (this.vocab && this.vocab[text[j]]) {
                 matches[text[j]] = text[j];
             } else {
@@ -190,6 +193,26 @@ var pgre = Object.create({
         
     }, 
 
+    //content
+    nextWord : function() {
+        this.__next = this.__next || 0;
+        if (this.__next < this.__occurrences) {
+            return "pgre" + (this.__next++)
+        } else {
+            this.__next = 0;
+            return "pgre" + (this.__occurrences-1);
+        }
+    },
+    prevWord : function() {
+        this.__next = this.__next || 0;
+        if (this.__next > 0) {
+            return "pgre" + (this.__next--)
+        } else {
+            this.__next = this.__occurrences - 1;
+            return "pgre0";
+        }
+    },
+
     // content
     findSentences : function(p,w) {
 
@@ -197,17 +220,19 @@ var pgre = Object.create({
 
         if (!w.test(p)) return [];
 
-        p = p.replace(/\s+/g, " ").replace(/(^\s+|\s+$)/g, "");
+        p = p.replace(/\s+/g, " ");
 
         var sentence,
             sentences = [], 
-            all_sentences = p.match(/\(?[^\.!\?]([^\.|]|\S\.\S)+[\.!\?]\)?/g);
+            all_sentences = p.match(/\(?[^\.!\?]([^\.]|\S\.\S)+[\.!\?]\)?/g);
 
         if (!all_sentences) return sentences;
+
         
-        while (sentence = all_sentences.shift()) {
+        while (sentence = all_sentences.pop()) {
             if (w.test(sentence)) {
-                sentences.push(sentence.replace(/(^\s+|\s+$)/g));
+                sentence = sentence.replace(/(^\s+|\s+$)/g, "");
+                sentences.push(sentence);
             }
         } 
 
@@ -1025,26 +1050,27 @@ var highlightWords = function(gre_words, pgre) {
     for (var j=0, jlen=gre_words.length;j<jlen;j++) {
         matches = gre_words[j].matches, 
         i = gre_words[j].index;
+        node = pgre.texts[i].node;
+        parent = pgre.texts[i].parent;
         for (word in matches) {
-            node = pgre.texts[i].node;
-            parent = pgre.texts[i].parent;
             nWord = matches[word];
             newNode = document.createElement("pgre");
             span = 
-                '<a href="#" name="#pgre'+n+'"></a><span class="pgre-highlight hint hint--top" data-hint="' 
+                '<a name="pgre'+(n++)+'"></a><span class="pgre-highlight hint hint--top" data-hint="' 
                 + pgre.wordDef(word, nWord)
+                +'" word="'
+                +nWord
                 +'">'+word+'</span>';
             newNode.innerHTML = node.data.replace(word,span); 
-            try {
-                parent.replaceChild(newNode, node);
-                pgre.words[word] = nWord;
-                n++;
-            } catch (e) {
-                // console.log(parent);
-                // console.log(node);
-            }
+        }
+        try {
+            parent.replaceChild(newNode, node);
+        } catch (e) {
+            console.log("Unexpeced error.");
         }
     }
+
+    pgre.__occurrences = n+1;
 };
 
 var _bindMethods = function(obj, methods) {
@@ -1094,6 +1120,46 @@ var pgreView = function(words, elem) {
         $(this).hide();
         el.hide();
     });;
+};
+
+var pgreControlView = function(pgre) {
+    var x = '<div class="pgre-control-container"><div style="display:block;width:200px;float:right"><span class="pgre-control-currword">pervasive</span><a href="#" class="pgre-control-btn"></a><a href="#"><div class="pgre-control-arrow-up"></div></a><a href="#"><div class="pgre-control-arrow-down"></div></a></div></div>';
+    x = $(x).appendTo("body");
+    pgre.__occurrences = $("pgre").length-1;
+    var routing = function(e){
+        if (!e) {
+            var anchor = pgre.prevWord();
+            var word = $('a[name="'+anchor+'"]').next().attr("word");
+            $(".pgre-control-currword:first").html(word);
+            return
+        }
+        e.preventDefault();
+        var repeat = 0;
+        if(e.target.className == "pgre-control-btn") {
+            $("#pgre-container").toggle();
+            $("#pgre-curtain").toggle();
+        } else if (e.target.className == "pgre-control-arrow-down") {
+            var word, anchor;
+            while(!word && repeat<pgre.__occurrences) {
+                repeat++;
+                anchor = pgre.nextWord();
+                word = $('a[name="'+anchor+'"]').next().attr("word");
+            }
+            document.location.hash = anchor;
+            $(".pgre-control-currword:first").html(word);
+        } else {
+            var word, anchor;
+            while(!word && repeat<pgre.__occurrences) {
+                repeat++;
+                anchor = pgre.prevWord();
+                word = $('a[name="'+anchor+'"]').next().attr("word");
+            }
+            document.location.hash = anchor;
+            $(".pgre-control-currword:first").html(word);
+        }
+    };
+    x.find("a").click(routing);
+    routing();
 };
 
 
@@ -1237,6 +1303,7 @@ function program2(depth0,data) {
 exports.grabText = grabText;
 exports.highlightWords = highlightWords;
 exports.pgreView = pgreView;
+exports.pgreControlView = pgreControlView;
 exports.extractBackground = extractBackground;
 exports.wordModelView = function(dom_pgre) {
     return Object.create(wordModelView).init(dom_pgre);
@@ -10609,7 +10676,7 @@ module.exports = Handlebars; // instantiate an instance
 // var singleton = handlebars.Handlebars,
 //  local = handlebars.create();
 
-},{"./handlebars/base":7,"./handlebars/utils":8,"./handlebars/compiler":9,"./handlebars/runtime":10}],7:[function(require,module,exports){/*jshint eqnull: true */
+},{"./handlebars/base":7,"./handlebars/utils":8,"./handlebars/runtime":9,"./handlebars/compiler":10}],7:[function(require,module,exports){/*jshint eqnull: true */
 
 module.exports.create = function() {
 
@@ -10836,7 +10903,100 @@ Handlebars.SafeString.prototype.toString = function() {
 return Handlebars;
 };
 
-},{}],9:[function(require,module,exports){// Each of these module will augment the Handlebars object as it loads. No need to perform addition operations
+},{}],9:[function(require,module,exports){exports.attach = function(Handlebars) {
+
+// BEGIN(BROWSER)
+
+Handlebars.VM = {
+  template: function(templateSpec) {
+    // Just add water
+    var container = {
+      escapeExpression: Handlebars.Utils.escapeExpression,
+      invokePartial: Handlebars.VM.invokePartial,
+      programs: [],
+      program: function(i, fn, data) {
+        var programWrapper = this.programs[i];
+        if(data) {
+          return Handlebars.VM.program(fn, data);
+        } else if(programWrapper) {
+          return programWrapper;
+        } else {
+          programWrapper = this.programs[i] = Handlebars.VM.program(fn);
+          return programWrapper;
+        }
+      },
+      programWithDepth: Handlebars.VM.programWithDepth,
+      noop: Handlebars.VM.noop,
+      compilerInfo: null
+    };
+
+    return function(context, options) {
+      options = options || {};
+      var result = templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
+
+      var compilerInfo = container.compilerInfo || [],
+          compilerRevision = compilerInfo[0] || 1,
+          currentRevision = Handlebars.COMPILER_REVISION;
+
+      if (compilerRevision !== currentRevision) {
+        if (compilerRevision < currentRevision) {
+          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision],
+              compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
+          throw "Template was precompiled with an older version of Handlebars than the current runtime. "+
+                "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").";
+        } else {
+          // Use the embedded version info since the runtime doesn't know about this revision yet
+          throw "Template was precompiled with a newer version of Handlebars than the current runtime. "+
+                "Please update your runtime to a newer version ("+compilerInfo[1]+").";
+        }
+      }
+
+      return result;
+    };
+  },
+
+  programWithDepth: function(fn, data, $depth) {
+    var args = Array.prototype.slice.call(arguments, 2);
+
+    return function(context, options) {
+      options = options || {};
+
+      return fn.apply(this, [context, options.data || data].concat(args));
+    };
+  },
+  program: function(fn, data) {
+    return function(context, options) {
+      options = options || {};
+
+      return fn(context, options.data || data);
+    };
+  },
+  noop: function() { return ""; },
+  invokePartial: function(partial, name, context, helpers, partials, data) {
+    var options = { helpers: helpers, partials: partials, data: data };
+
+    if(partial === undefined) {
+      throw new Handlebars.Exception("The partial " + name + " could not be found");
+    } else if(partial instanceof Function) {
+      return partial(context, options);
+    } else if (!Handlebars.compile) {
+      throw new Handlebars.Exception("The partial " + name + " could not be compiled when running in runtime-only mode");
+    } else {
+      partials[name] = Handlebars.compile(partial, {data: data !== undefined});
+      return partials[name](context, options);
+    }
+  }
+};
+
+Handlebars.template = Handlebars.VM.template;
+
+// END(BROWSER)
+
+return Handlebars;
+
+};
+
+},{}],10:[function(require,module,exports){// Each of these module will augment the Handlebars object as it loads. No need to perform addition operations
 module.exports.attach = function(Handlebars) {
 
 var visitor = require("./visitor"),
@@ -12923,98 +13083,5 @@ return new Parser;
 // END(BROWSER)
 
 module.exports = handlebars;
-
-},{}],10:[function(require,module,exports){exports.attach = function(Handlebars) {
-
-// BEGIN(BROWSER)
-
-Handlebars.VM = {
-  template: function(templateSpec) {
-    // Just add water
-    var container = {
-      escapeExpression: Handlebars.Utils.escapeExpression,
-      invokePartial: Handlebars.VM.invokePartial,
-      programs: [],
-      program: function(i, fn, data) {
-        var programWrapper = this.programs[i];
-        if(data) {
-          return Handlebars.VM.program(fn, data);
-        } else if(programWrapper) {
-          return programWrapper;
-        } else {
-          programWrapper = this.programs[i] = Handlebars.VM.program(fn);
-          return programWrapper;
-        }
-      },
-      programWithDepth: Handlebars.VM.programWithDepth,
-      noop: Handlebars.VM.noop,
-      compilerInfo: null
-    };
-
-    return function(context, options) {
-      options = options || {};
-      var result = templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
-
-      var compilerInfo = container.compilerInfo || [],
-          compilerRevision = compilerInfo[0] || 1,
-          currentRevision = Handlebars.COMPILER_REVISION;
-
-      if (compilerRevision !== currentRevision) {
-        if (compilerRevision < currentRevision) {
-          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision],
-              compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
-          throw "Template was precompiled with an older version of Handlebars than the current runtime. "+
-                "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").";
-        } else {
-          // Use the embedded version info since the runtime doesn't know about this revision yet
-          throw "Template was precompiled with a newer version of Handlebars than the current runtime. "+
-                "Please update your runtime to a newer version ("+compilerInfo[1]+").";
-        }
-      }
-
-      return result;
-    };
-  },
-
-  programWithDepth: function(fn, data, $depth) {
-    var args = Array.prototype.slice.call(arguments, 2);
-
-    return function(context, options) {
-      options = options || {};
-
-      return fn.apply(this, [context, options.data || data].concat(args));
-    };
-  },
-  program: function(fn, data) {
-    return function(context, options) {
-      options = options || {};
-
-      return fn(context, options.data || data);
-    };
-  },
-  noop: function() { return ""; },
-  invokePartial: function(partial, name, context, helpers, partials, data) {
-    var options = { helpers: helpers, partials: partials, data: data };
-
-    if(partial === undefined) {
-      throw new Handlebars.Exception("The partial " + name + " could not be found");
-    } else if(partial instanceof Function) {
-      return partial(context, options);
-    } else if (!Handlebars.compile) {
-      throw new Handlebars.Exception("The partial " + name + " could not be compiled when running in runtime-only mode");
-    } else {
-      partials[name] = Handlebars.compile(partial, {data: data !== undefined});
-      return partials[name](context, options);
-    }
-  }
-};
-
-Handlebars.template = Handlebars.VM.template;
-
-// END(BROWSER)
-
-return Handlebars;
-
-};
 
 },{}]},{},[1]);

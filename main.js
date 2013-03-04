@@ -85,6 +85,7 @@ var pgre = Object.create({
                 pgreDOM.wordModelView();
                 self.storeWords.call(self, msg);
                 pgreDOM.pgreView(self.words, '<div id=\"pgre-container\"></div>');
+                pgreDOM.pgreControlView(self);
             });
         }
         this.loaded = true;
@@ -128,6 +129,9 @@ var pgre = Object.create({
             }
         }, this); 
         this.words = toArray(words, "word");
+        this.words.sort(function(a,b){
+            return (a.word > b.word)
+        });
         return this
     },
 
@@ -155,7 +159,6 @@ var pgre = Object.create({
         var text, word, matches={};
         text = textBlob.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/[^a-zA-Z\-]+/);
         for (var j=0, jlen=text.length;j<jlen;j++) {
-            if (text[j].length<2) continue;
             if (this.vocab && this.vocab[text[j]]) {
                 matches[text[j]] = text[j];
             } else {
@@ -190,6 +193,26 @@ var pgre = Object.create({
         
     }, 
 
+    //content
+    nextWord : function() {
+        this.__next = this.__next || 0;
+        if (this.__next < this.__occurrences) {
+            return "pgre" + (this.__next++)
+        } else {
+            this.__next = 0;
+            return "pgre" + (this.__occurrences-1);
+        }
+    },
+    prevWord : function() {
+        this.__next = this.__next || 0;
+        if (this.__next > 0) {
+            return "pgre" + (this.__next--)
+        } else {
+            this.__next = this.__occurrences - 1;
+            return "pgre0";
+        }
+    },
+
     // content
     findSentences : function(p,w) {
 
@@ -197,17 +220,19 @@ var pgre = Object.create({
 
         if (!w.test(p)) return [];
 
-        p = p.replace(/\s+/g, " ").replace(/(^\s+|\s+$)/g, "");
+        p = p.replace(/\s+/g, " ");
 
         var sentence,
             sentences = [], 
-            all_sentences = p.match(/\(?[^\.!\?]([^\.|]|\S\.\S)+[\.!\?]\)?/g);
+            all_sentences = p.match(/\(?[^\.!\?]([^\.]|\S\.\S)+[\.!\?]\)?/g);
 
         if (!all_sentences) return sentences;
+
         
-        while (sentence = all_sentences.shift()) {
+        while (sentence = all_sentences.pop()) {
             if (w.test(sentence)) {
-                sentences.push(sentence.replace(/(^\s+|\s+$)/g));
+                sentence = sentence.replace(/(^\s+|\s+$)/g, "");
+                sentences.push(sentence);
             }
         } 
 
