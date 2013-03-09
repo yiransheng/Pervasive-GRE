@@ -8,6 +8,9 @@ Though this app is designed with aiding GRE preperation as its goal, it certainl
 
 Get it at [Chrome Web Store](https://chrome.google.com/webstore/detail/pervasive-gre/oniippcgggpbkcdjekknhmoeambkohmn/reviews)
 
+![screeshot](http://i.imgur.com/OdQjNrC.jpg)
+![screeshot](http://i.imgur.com/4QX8JVj.jpg)
+
 Credits
 =======
 
