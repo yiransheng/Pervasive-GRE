@@ -6,6 +6,8 @@ This is a Chrome Extension designed to aid one's vocabulary building process, in
 
 Though this app is designed with aiding GRE preperation as its goal, it certainly helps general English language learners as well.        
 
+Get it at [Chrome Web Store](https://chrome.google.com/webstore/detail/pervasive-gre/oniippcgggpbkcdjekknhmoeambkohmn/reviews)
+
 Credits
 =======
 
